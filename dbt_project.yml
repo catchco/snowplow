@@ -13,6 +13,14 @@ macro-paths: ["macros"]
 
 models:
   snowplow:
+    base:
+      materialized: ephemeral  
+      optional:
+        enabled: false
+    page_views:
+      optional:
+        enabled: false
+
     vars:
       'snowplow:use_fivetran_interface': false
       #'snowplow:events': TABLE OR {{ REF() }}
@@ -22,10 +30,35 @@ models:
       'snowplow:timezone': 'America/New_York'
       'snowplow:page_ping_frequency': 30
       'snowplow:app_ids': []
-    base:
-      materialized: ephemeral  
-      optional:
-        enabled: false
-    page_views:
-      optional:
-        enabled: false
+      'snowplow:bot_useragents':
+        - bot
+        - crawl
+        - slurp
+        - spider
+        - archiv
+        - spinn
+        - sniff
+        - seo
+        - audit
+        - survey
+        - pingdom
+        - worm
+        - capture
+        - (browser|screen)shots
+        - analyz
+        - index
+        - thumb
+        - check
+        - facebook
+        - PingdomBot
+        - PhantomJS
+        - YandexBot
+        - Twitterbot
+        - a_archiver
+        - facebookexternalhit
+        - Bingbot
+        - BingPreview
+        - Googlebot
+        - Baiduspider
+        - 360(Spider|User-agent)
+        - semalt
