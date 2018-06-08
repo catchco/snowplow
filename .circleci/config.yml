@@ -28,6 +28,9 @@ jobs:
 
       - run:
           name: "Run Tests - BigQuery"
+          environment:
+              GCLOUD_SERVICE_KEY_PATH: "${HOME}/gcloud-service-key.json"
+
           command: |
             . venv/bin/activate
             cd integration_tests

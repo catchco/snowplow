@@ -22,7 +22,7 @@ integration_tests:
     bigquery:
       type: bigquery
       method: service-account
-      keyfile: ~/gcloud-service-key.json
+      keyfile: "{{ env_var('GCLOUD_SERVICE_KEY_PATH') }}"
       project: 'dbt-integration-tests'
       schema: snowplow_integration_tests
       threads: 1
