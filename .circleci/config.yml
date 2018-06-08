@@ -27,15 +27,11 @@ jobs:
             cp integration_tests/ci/sample.profiles.yml ~/.dbt/profiles.yml
 
       - run:
-          name: "Prepare tests"
+          name: "Run Tests - BigQuery"
           command: |
             . venv/bin/activate
             cd integration_tests
-            dbt deps
-
-      - run:
-          name: "Run Tests - BigQuery"
-          command: |
+            dbt deps --target bigquery
             dbt seed --target bigquery --full-refresh
             dbt run --target bigquery --full-refresh
             dbt run --target bigquery
