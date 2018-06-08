@@ -12,7 +12,7 @@ jobs:
       - run:
           run: setup_creds
           command: |
-            GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
+            echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
 
       - restore_cache:
           key: deps1-{{ .Branch }}
