@@ -10,11 +10,26 @@
     )
 }}
 
+{% set start_date = get_most_recent_record(this, "page_view_start", "2001-01-01") %}
+
+/*
+    General approach: find sessions that happened since the last time
+    the model was processed. The naive approach just grabs events that
+    happened on or after this date, but we can miss events that bridge
+    midnight. Instead, we fetch an extra day of events, but only consider
+    the sessions that occur on or after the start_date. The extra lookback
+    day will give us the full picture of events, but we won't reprocess the extra
+    events from the previous day unless they are present on the `start_date`.
+*/
+
 with all_events as (
 
     select *
     from {{ ref('snowplow_base_events') }}
-    where DATE(collector_tstamp) > DATE_SUB(current_date, INTERVAL 7 DAY)
+
+    -- load up events from the start date, and the day before it, to ensure
+    -- that we capture pageviews that span midnight
+    where DATE(collector_tstamp) >= date_sub('{{ start_date }}', interval 1 day)
 
 ),
 
@@ -24,6 +39,9 @@ new_sessions as (
         domain_sessionid
 
     from all_events
+
+    -- only consider events for sessions that occurred on or after the start_date
+    where DATE(collector_tstamp) >= '{{ start_date }}'
 
 ),
 

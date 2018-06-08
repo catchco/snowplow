@@ -10,10 +10,12 @@
     )
 }}
 
+{% set start_date = get_most_recent_record(this, "session_start", "2001-01-01") %}
+
 with all_page_views as (
 
     select * from {{ ref('snowplow_page_views') }}
-    where DATE(page_view_start) > DATE_SUB(current_date, INTERVAL 7 DAY)
+    where DATE(page_view_start) >= date_sub('{{ start_date }}', interval 1 day)
 
 ),
 
@@ -23,6 +25,7 @@ new_page_views as (
         session_id
 
     from all_page_views
+    where DATE(page_view_start) >= '{{ start_date }}'
 
 ),
 
