@@ -1,83 +1,41 @@
 
-with page_views as (
+{% macro bigquery__snowplow_sessions() %}
 
-    select * from `dbt_dbanin.snowplow_page_views`
-    where page_view_start > '2018-06-01'
+{{
+    config(
+        materialized='table',
+        partition_by='DATE(session_start)'
+    )
+}}
+
+with sessions as (
+
+    select * from {{ ref('snowplow_sessions_tmp') }}
+
+),
+
+id_map as (
+
+    select * from {{ ref('snowplow_id_map') }}
 
 ),
 
 
-sessions as (
-  select
-    domain_sessionid,
-    min(page_view_start) as session_start,
-    max(page_view_end) as session_end,
-    sum(pings.time_engaged_in_s) as time_engaged_in_s,
+stitched as (
 
-    array_agg(struct(
-        app_id,
-        br_type,
-        domain_userid,
-        domain_sessionidx,
-        user_id,
-        user_ipaddress,
-        dvce_ismobile,
-        dvce_type,
-        geo,
-        utm,
-        referrer
-      )
-      order by collector_tstamp asc
-    )[safe_offset(0)] as details,
+    select
+        coalesce(id.user_id, s.user_snowplow_domain_id) as inferred_user_id,
+        s.*
 
-    array_agg(struct(
-        page_view_id,
-        page,
-        referrer,
-        pings,
-        page_pings
-      )
-      order by collector_tstamp asc
-    ) as pageviews
-
-  from page_views
-  group by 1
-
-),
-
-sessions_xf as (
-
-  select
-    domain_sessionid,
-
-    details.domain_userid,
-    details.domain_sessionidx,
-    details.user_id,
-    details.user_ipaddress,
-    details.app_id,
-    details.br_type,
-    details.dvce_ismobile,
-    details.dvce_type,
-    details.geo,
-    details.utm,
-
-    session_start,
-    session_end,
-
-    struct(
-      pageviews[safe_offset(0)].page.url_path as first_page_path,
-      pageviews[safe_offset(array_length(pageviews) - 1)].page.url_path as exit_page_path,
-      pageviews[safe_offset(0)].page.url as first_page_url,
-      pageviews[safe_offset(array_length(pageviews) - 1)].page.url as exit_page_url
-    ) as overview,
-
-    array_length(pageviews) as count_pageviews,
-    time_engaged_in_s,
-    pageviews
-
-  from sessions
+    from sessions as s
+    left outer join id_map as id on s.user_snowplow_domain_id = id.domain_userid
 
 )
 
-select *
-from sessions_xf
+select
+    * except(session_index),
+    row_number() over (partition by inferred_user_id order by session_start) as session_index
+
+from stitched
+
+{% endmacro %}

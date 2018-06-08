@@ -1,34 +1,122 @@
 
 {% macro bigquery__snowplow_page_views() %}
 
-{{ config(materialized='incremental', partition_by='DATE(page_view_start)', sql_where='TRUE', unique_key="page_view_id") }}
+{{
+    config(
+        materialized='incremental',
+        partition_by='DATE(page_view_start)',
+        sql_where='TRUE',
+        unique_key="page_view_id"
+    )
+}}
 
-with events as (
+with all_events as (
+
+    select *
+    from `snowplow.event_partitioned`
+    where DATE(collector_tstamp) > DATE_SUB(current_date, INTERVAL 7 DAY)
+
+),
+
+new_sessions as (
+
+    select distinct
+        domain_sessionid
+
+    from all_events
+
+),
+
+relevant_events as (
+
+    select *
+    from all_events
+    where domain_sessionid in (select distinct domain_sessionid from new_sessions)
+
+),
+
+web_page_context as (
+
+    select *
+    from `snowplow.web_page`
+
+),
+
+events as (
 
   select
-    wp.id as page_view_id,
-    event.*
+    web_page_context.id as page_view_id,
+    relevant_events.*
 
-  from `snowplow.event_partitioned` as event
-  join `snowplow.web_page` as wp using (event_id)
-  where collector_tstamp > '2018-06-01'
+  from relevant_events
+  join web_page_context using (event_id)
 
 ),
 
 page_views as (
 
   select
-    page_view_id,
+    user_id as user_custom_id,
+    domain_userid as user_snowplow_domain_id,
+    network_userid as user_snowplow_crossdomain_id,
     app_id,
-    br_type,
-    collector_tstamp,
-    domain_sessionid,
-    domain_sessionidx,
-    domain_userid,
-    dvce_ismobile,
-    dvce_type,
-    user_id,
-    user_ipaddress,
+
+    domain_sessionid as session_id,
+    domain_sessionidx as session_index,
+
+    page_view_id,
+
+    row_number() over (partition by domain_userid order by collector_tstamp) as page_view_index,
+    row_number() over (partition by domain_sessionid order by collector_tstamp) as page_view_in_session_index,
+    count(*) over (partition by domain_sessionid) as max_session_page_view_index,
+
+    struct(
+      concat(page_urlhost, page_urlpath) as url,
+      page_urlscheme as scheme,
+      page_urlhost as host,
+      page_urlport as port,
+      page_urlpath as path,
+      page_urlquery as query,
+      page_urlfragment as fragment,
+      page_title as title,
+      page_url as full_url
+    ) as page,
+
+    struct(
+      concat(refr_urlhost, refr_urlpath) as url,
+      refr_urlscheme as scheme,
+      refr_urlhost as host,
+      refr_urlport as port,
+      refr_urlpath as path,
+      refr_urlquery as query,
+      refr_urlfragment as fragment,
+
+      case
+        when refr_medium is null then 'direct'
+        when refr_medium = 'unknown' then 'other'
+        else refr_medium
+      end as medium,
+      refr_source as _source,
+      refr_term as term
+    ) as referrer,
+
+    struct(
+      mkt_medium as medium,
+      mkt_source as source,
+      mkt_term as term,
+      mkt_content as content,
+      mkt_campaign as campaign,
+      mkt_clickid as click_id,
+      mkt_network as network
+    ) as marketing,
+
+    struct(
+      user_ipaddress as ip_address
+      --ip_isp as isp,
+      --ip_organization as organization,
+      --ip_domain as domain,
+      --ip_netspeed as net_speed
+    ) as ip,
 
     struct(
       geo_city as city,
@@ -41,20 +129,6 @@ page_views as (
       geo_zipcode as zipcode
     ) as geo,
 
-    -- TODO : Add these back in
-    struct(
-      --mkt_campaign as campaign,
-      --mkt_content as content,
-      --mkt_medium as medium,
-      --mkt_source as source,
-      --mkt_term as term
-      null as campaign,
-      null as content,
-      null as medium,
-      null as source,
-      null as term
-    ) as utm,
-
     struct(
       os_family as family,
       os_manufacturer as manufacturer,
@@ -62,29 +136,16 @@ page_views as (
       os_timezone as timezone
     ) as os,
 
-    struct(
-      page_referrer as referrer,
-      page_title as title,
-      page_url as url,
-      page_urlfragment as url_fragment,
-      page_urlhost as url_host,
-      page_urlpath as url_path,
-      page_urlquery as url_query,
-      page_urlscheme as url_scheme
-    ) as page,
+    br_lang as browser_language,
+
+    -- TODO : useragent
+    -- TODO : perf_timing
 
     struct(
-      refr_medium as medium,
-      refr_source as source,
-      refr_term as term,
-      refr_urlfragment as url_fragment,
-      refr_urlhost as url_host,
-      refr_urlpath as url_path,
-      refr_urlquery as url_query,
-      refr_urlscheme as url_scheme
-    ) as referrer,
-
-    row_number() over (partition by domain_sessionid order by collector_tstamp) as page_view_index
+        br_renderengine as browser_engine,
+        dvce_type as type,
+        dvce_ismobile as is_mobile
+    ) as device
 
   from events
   where event = 'page_view'
@@ -95,21 +156,23 @@ page_views as (
 
 ),
 
-page_pings_xf as (
+page_pings as (
 
   select
     page_view_id,
 
     min(collector_tstamp) as page_view_start,
     max(collector_tstamp) as page_view_end,
-    -- TODO : Should we include these?
-    min(collector_tstamp) as min_tstamp,
-    max(collector_tstamp) as max_tstamp,
+    -- convert_timezone('UTC', '{{ timezone }}', min(collector_tstamp)) as page_view_start_local,
+    -- convert_timezone('UTC', '{{ timezone }}', max(collector_tstamp)) as page_view_end_local,
 
-    max(doc_width) as doc_width,
-    max(doc_height) as doc_height,
-    max(br_viewwidth) as br_viewwidth,
-    max(br_viewheight) as br_viewheight,
+    struct(
+        max(doc_width) as doc_width,
+        max(doc_height) as doc_height,
+        max(br_viewwidth) as view_width,
+        max(br_viewheight) as view_height
+    ) as browser,
+
     least(greatest(min(coalesce(pp_xoffset_min, 0)), 0), max(doc_width)) as hmin,
     least(greatest(max(coalesce(pp_xoffset_max, 0)), 0), max(doc_width)) as hmax,
     least(greatest(min(coalesce(pp_yoffset_min, 0)), 0), max(doc_height)) as vmin,
@@ -117,6 +180,7 @@ page_pings_xf as (
 
     sum(case when event = 'page_view' then 1 else 0 end) as pv_count,
     sum(case when event = 'page_ping' then 1 else 0 end) as pp_count,
+    sum(case when event = 'page_ping' then 1 else 0 end) * {{ var('snowplow:page_ping_frequency', 30) }} as time_engaged_in_s,
 
     array_agg(struct(
       event_id,
@@ -128,7 +192,7 @@ page_pings_xf as (
       pp_yoffset_max,
       doc_width,
       doc_height
-    ) order by collector_tstamp) as pings_raw
+    ) order by collector_tstamp) as page_pings
 
   from events
   where event in ('page_ping', 'page_view')
@@ -136,37 +200,52 @@ page_pings_xf as (
 
 ),
 
-page_pings_relative as (
+page_pings_xf as (
+
+    select
+      *,
+      round(100*(greatest(hmin, 0)/nullif(browser.doc_width, 0))) as x_scroll_pct_min,
+      round(100*(least(hmax + browser.view_width, browser.doc_width)/nullif(browser.doc_width, 0))) as x_scroll_pct,
+      round(100*(greatest(vmin, 0)/nullif(browser.doc_height, 0))) as y_scroll_pct_min,
+      round(100*(least(vmax + browser.view_height, browser.doc_height)/nullif(browser.doc_height, 0))) as y_scroll_pct
+
+    from page_pings
+
+),
+
+engagement as (
 
   select
     page_view_id,
+
     page_view_start,
     page_view_end,
-    pings_raw as page_pings,
+
+    browser,
 
     struct(
-      round(100*(greatest(hmin, 0)/nullif(doc_width, 0))) as relative_hmin,
-      round(100*(least(hmax + br_viewwidth, doc_width)/nullif(doc_width, 0))) as relative_hmax,
-      round(100*(greatest(vmin, 0)/nullif(doc_height, 0))) as relative_vmin,
-      round(100*(least(vmax + br_viewheight, doc_height)/nullif(doc_height, 0))) as relative_vmax,
-      min_tstamp,
-      max_tstamp,
-      pp_count * 10 as time_engaged_in_s -- TODO : Use variable instead of '10'
-    ) as pings
+      x_scroll_pct,
+      y_scroll_pct,
+      x_scroll_pct_min,
+      y_scroll_pct_min,
+      time_engaged_in_s,
+      case
+            when time_engaged_in_s between 0 and 9 then '0s to 9s'
+            when time_engaged_in_s between 10 and 29 then '10s to 29s'
+            when time_engaged_in_s between 30 and 59 then '30s to 59s'
+            when time_engaged_in_s > 59 then '60s or more'
+            else null
+      end as time_engaged_in_s_tier,
+      case when time_engaged_in_s = 0 then true else false end as bounced,
+      case when time_engaged_in_s >= 30 and y_scroll_pct >= 25 then true else false end as engaged
+    ) as engagement
 
   from page_pings_xf
 
 )
 
-select
-    page_views.*,
-    -- TODO : Make this nicer
-    page_view_start,
-    page_view_end,
-    page_pings_relative.pings,
-    page_pings_relative.page_pings
-
+select *
 from page_views
-join page_pings_relative using (page_view_id)
+join engagement using (page_view_id)
 
 {% endmacro %}

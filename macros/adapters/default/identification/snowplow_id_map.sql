@@ -12,6 +12,16 @@
 -- determine most recent mapping between domain_userid and user_id
 -- add new & overwrite existing if changed
 
+{{
+    config(
+        materialized='incremental',
+        sort='domain_userid',
+        dist='domain_userid',
+        sql_where='TRUE',
+        unique_key='domain_userid'
+    )
+}}
+
 with all_events as (
 
     select * from {{ ref('snowplow_web_events') }}
