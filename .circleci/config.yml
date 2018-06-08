@@ -33,6 +33,7 @@ jobs:
 
           command: |
             . venv/bin/activate
+            echo `pwd`
             cd integration_tests
             dbt deps --target bigquery
             dbt seed --target bigquery --full-refresh
