@@ -5,10 +5,14 @@ jobs:
   build:
     docker:
       - image: circleci/python:3.6.2-stretch
-      - image: circleci/postgres:9.6.5-alpine-ram
 
     steps:
       - checkout
+
+      - run:
+          run: setup_creds
+          command: |
+            GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
 
       - restore_cache:
           key: deps1-{{ .Branch }}
