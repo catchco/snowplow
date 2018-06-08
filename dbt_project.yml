@@ -27,42 +27,11 @@ models:
 
     vars:
       'snowplow:use_fivetran_interface': false
-      'snowplow:events': 'snowplow.event_partitioned'
-      'snowplow:context:web_page': 'snowplow.web_page'
-      'snowplow:context:performance_timing': FALSE
-      'snowplow:context:useragent': FALSE
+      #'snowplow:events': TABLE OR {{ REF() }}
+      #'snowplow:context:web_page': TABLE OR {{ REF() }}
+      #'snowplow:context:performance_timing': TABLE OR {{ REF() }} or FALSE
+      #'snowplow:context:useragent': TABLE OR {{ REF() }} or FALSE
       'snowplow:timezone': 'America/New_York'
       'snowplow:page_ping_frequency': 30
       'snowplow:app_ids': []
-      'snowplow:bot_useragents':
-        - bot
-        - crawl
-        - slurp
-        - spider
-        - archiv
-        - spinn
-        - sniff
-        - seo
-        - audit
-        - survey
-        - pingdom
-        - worm
-        - capture
-        - (browser|screen)shots
-        - analyz
-        - index
-        - thumb
-        - check
-        - facebook
-        - PingdomBot
-        - PhantomJS
-        - YandexBot
-        - Twitterbot
-        - a_archiver
-        - facebookexternalhit
-        - Bingbot
-        - BingPreview
-        - Googlebot
-        - Baiduspider
-        - 360(Spider|User-agent)
-        - semalt
+

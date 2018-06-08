@@ -13,7 +13,7 @@
 with all_events as (
 
     select *
-    from `snowplow.event_partitioned`
+    from {{ ref('snowplow_base_events') }}
     where DATE(collector_tstamp) > DATE_SUB(current_date, INTERVAL 7 DAY)
 
 ),
@@ -37,8 +37,7 @@ relevant_events as (
 
 web_page_context as (
 
-    select *
-    from `snowplow.web_page`
+    select * from {{ ref('snowplow_base_web_page_context') }}
 
 ),
 
@@ -111,11 +110,11 @@ page_views as (
     ) as marketing,
 
     struct(
-      user_ipaddress as ip_address
-      --ip_isp as isp,
-      --ip_organization as organization,
-      --ip_domain as domain,
-      --ip_netspeed as net_speed
+      user_ipaddress as ip_address,
+      ip_isp as isp,
+      ip_organization as organization,
+      ip_domain as domain,
+      ip_netspeed as net_speed
     ) as ip,
 
     struct(

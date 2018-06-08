@@ -17,7 +17,7 @@
 with all_events as (
 
     select *
-    from `snowplow.event_partitioned`
+    from {{ ref('snowplow_base_events') }}
     where DATE(collector_tstamp) > DATE_SUB(current_date, INTERVAL 7 DAY)
 
 ),
