@@ -42,6 +42,8 @@ users as (
 
     select
         inferred_user_id,
+        first_session.user_snowplow_domain_id,
+
         array(select distinct user_snowplow_domain_id from unnest(all_sessions)) as domain_userids,
 
         first_session.session_start as first_session_start,
