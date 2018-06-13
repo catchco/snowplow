@@ -47,7 +47,9 @@ new_sessions as (
 
 relevant_events as (
 
-    select *
+    select *,
+        row_number() over (partition by event_id order by dvce_created_tstamp) as dedupe
+
     from all_events
     where domain_sessionid in (select distinct domain_sessionid from new_sessions)
 
@@ -55,18 +57,19 @@ relevant_events as (
 
 web_page_context as (
 
-    select * from {{ ref('snowplow_base_web_page_context') }}
+    select root_id as event_id, page_view_id from {{ ref('snowplow_web_page_context') }}
 
 ),
 
 events as (
 
-  select
-    web_page_context.id as page_view_id,
-    relevant_events.*
+    select
+        web_page_context.page_view_id,
+        relevant_events.* except (dedupe)
 
-  from relevant_events
-  join web_page_context using (event_id)
+    from relevant_events
+    join web_page_context using (event_id)
+    where dedupe = 1
 
 ),
 

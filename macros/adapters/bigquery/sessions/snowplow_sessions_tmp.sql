@@ -115,6 +115,7 @@ sessions as (
 
     array(
       select struct(
+        page_view_id,
         page_view_start,
         page_view_end,
         page,
