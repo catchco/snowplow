@@ -42,16 +42,16 @@ jobs:
             dbt test --target bigquery
 
       - run:
-          name: "Run Tests - Redshift"
+          name: "Run Tests - Snowflake"
           command: |
             . venv/bin/activate
             echo `pwd`
             cd integration_tests
-            dbt deps --target redshift
-            dbt seed --target redshift --full-refresh
-            dbt run --target redshift --full-refresh
-            dbt run --target redshift
-            dbt test --target redshift
+            dbt deps --target snowflake
+            dbt seed --target snowflake --full-refresh
+            dbt run --target snowflake --full-refresh
+            dbt run --target snowflake
+            dbt test --target snowflake
 
       - save_cache:
           key: deps1-{{ .Branch }}

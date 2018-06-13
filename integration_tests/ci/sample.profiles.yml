@@ -26,3 +26,14 @@ integration_tests:
       project: 'dbt-integration-tests'
       schema: snowplow_integration_tests
       threads: 1
+
+    snowflake:
+      type: snowflake
+      account: "{{ env_var('CI_SNOWFLAKE_DBT_ACCOUNT') }}"
+      user: "{{ env_var('CI_SNOWFLAKE_DBT_USER') }}"
+      password: "{{ env_var('CI_SNOWFLAKE_DBT_PASS') }}"
+      role: "{{ env_var('CI_SNOWFLAKE_DBT_ROLE') }}"
+      database: "{{ env_var('CI_SNOWFLAKE_DBT_DATABASE') }}"
+      warehouse: "{{ env_var('CI_SNOWFLAKE_DBT_WAREHOUSE') }}"
+      schema: snowplow_integration_tests
+      threads: 1
