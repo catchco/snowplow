@@ -9,13 +9,13 @@ config:
 integration_tests:
   target: bigquery
   outputs:
-    postgres:
-      type: postgres
-      host: localhost
-      user: "{{ env_var('CI_DBT_USER') }}"
-      pass: "{{ env_var('CI_DBT_PASS') }}"
-      port: "{{ env_var('CI_DBT_PORT') }}"
-      dbname: "{{ env_var('CI_DBT_DBNAME') }}"
+    redshift:
+      type: redshift
+      host: "{{ env_var('CI_REDSHIFT_DBT_HOST') }}"
+      user: "{{ env_var('CI_REDSHIFT_DBT_USER') }}"
+      pass: "{{ env_var('CI_REDSHIFT_DBT_PASS') }}"
+      dbname: "{{ env_var('CI_REDSHIFT_DBT_DBNAME') }}"
+      port: 5439
       schema: snowplow_integration_tests
       threads: 1
 

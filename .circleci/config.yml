@@ -41,6 +41,18 @@ jobs:
             dbt run --target bigquery
             dbt test --target bigquery
 
+      - run:
+          name: "Run Tests - Redshift"
+          command: |
+            . venv/bin/activate
+            echo `pwd`
+            cd integration_tests
+            dbt deps --target redshift
+            dbt seed --target redshift --full-refresh
+            dbt run --target redshift --full-refresh
+            dbt run --target redshift
+            dbt test --target redshift
+
       - save_cache:
           key: deps1-{{ .Branch }}
           paths:
