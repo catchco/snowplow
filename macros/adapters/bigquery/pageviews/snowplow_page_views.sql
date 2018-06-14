@@ -10,6 +10,7 @@
     )
 }}
 
+{% set timezone = var('snowplow:timezone', 'UTC') %}
 {% set start_date = get_most_recent_record(this, "page_view_start", "2001-01-01") %}
 
 /*
@@ -116,9 +117,9 @@ page_views as (
         when refr_medium = 'unknown' then 'other'
         else refr_medium
       end as medium,
-      refr_source as _source,
+      refr_source as source,
       refr_term as term
-    ) as referrer,
+    ) as referer,
 
     struct(
       mkt_medium as medium,
@@ -180,11 +181,8 @@ page_pings as (
 
   select
     page_view_id,
-
     min(collector_tstamp) as page_view_start,
     max(collector_tstamp) as page_view_end,
-    -- convert_timezone('UTC', '{{ timezone }}', min(collector_tstamp)) as page_view_start_local,
-    -- convert_timezone('UTC', '{{ timezone }}', max(collector_tstamp)) as page_view_end_local,
 
     struct(
         max(doc_width) as doc_width,

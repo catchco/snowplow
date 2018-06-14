@@ -63,8 +63,15 @@ sessions_agg_xf as (
                 sum(engagement.time_engaged_in_s) as time_engaged_in_s
             )
             from unnest(all_pageviews)
+        ) as engagement,
 
-        ) as engagement
+        (
+            select struct(
+                min(page_view_start) as session_start,
+                max(page_view_end) as session_end
+            )
+            from unnest(all_pageviews)
+        ) as timing
 
 
     from sessions_agg
@@ -83,8 +90,8 @@ sessions as (
 
     first_page_view.app_id,
 
-    first_page_view.page_view_start as session_start,
-    exit_page_view.page_view_end as session_end,
+    timing.session_start,
+    timing.session_end,
     array_length(all_pageviews) as count_page_views,
 
     struct(
@@ -105,7 +112,7 @@ sessions as (
     first_page_view.page as landing_page,
     exit_page_view.page as exit_page,
 
-    first_page_view.referrer as referrer,
+    first_page_view.referer as referer,
     first_page_view.marketing as marketing,
     first_page_view.geo as geo,
     first_page_view.ip as ip,

@@ -3,9 +3,9 @@
 {% endmacro %}
 
 {% macro default__similar_to(values) %}
-    similar to '%({{ values | join("|") }})%'
+    similar to '%({{ values }})%'
 {%- endmacro %}
 
 {% macro snowflake__similar_to(values) %}
-    rlike '.*({ {values | join("|") }}).*'
+    rlike '.*({{ values }}).*'
 {% endmacro %}

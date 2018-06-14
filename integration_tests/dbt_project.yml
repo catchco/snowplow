@@ -15,17 +15,31 @@ clean-targets:         # directories to be removed by `dbt clean`
     - "target"
     - "dbt_modules"
 
+quoting:
+  identifier: false
+  schema: false
+
 models:
+  vars:
+    'snowplow:timezone': 'America/New_York'
+
   snowplow:
     vars:
       'snowplow:events': '{{ ref("event") }}'
       'snowplow:context:web_page': '{{ ref("web_page") }}'
-      'snowplow:context:performance_timing': 'FALSE'
-      'snowplow:context:useragent': 'FALSE'
-
+      'snowplow:context:performance_timing': FALSE
+      'snowplow:context:useragent': FALSE
 
 seeds:
   snowplow_integration_tests:
+    pre-hook:
+      - |
+        {% if target.name != 'bigquery' %}
+          create schema if not exists {{ this.schema }}
+        {% else %}
+          select 1 as id -- pass
+        {% endif %}
+
     snowplow:
       event:
         column_types:
