@@ -12,6 +12,7 @@ data-paths: ["data"]
 macro-paths: ["macros"]
 
 models:
+  bind: false
   snowplow:
     vars:
       'snowplow:use_fivetran_interface': false
