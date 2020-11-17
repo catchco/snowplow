@@ -15,11 +15,6 @@ with web_page_views as (
 
 ),
 
-orders as (
-
-    select * from {{ ref('snowplow_base_transactions') }}
-),
-
 prep AS (
 
     select
@@ -196,13 +191,6 @@ sessions as (
     where a.page_view_in_session_index = 1
 
 
-),
-
-final as (
-    select a.*, 
-    b.order_ref_num
-    from sessions a
-    left join orders b on a.session_id = b.session_id
 )
 
-select * from final
+select * from sessions

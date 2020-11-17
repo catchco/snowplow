@@ -22,11 +22,10 @@ with all_events as (
 
 ),
 
--- if there is a recursive view error, try changing "this.schema" to "snowplow", or {{ this }} to {{ref(this)}}
 web_events as (
 
     select * from all_events
-    {% if adapter.get_relation(database = this.database, schema = this.schema, identifier = this.name) and not flags.FULL_REFRESH %}
+    {% if adapter.already_exists(this.schema, this.name) and not flags.FULL_REFRESH %}
     where collector_tstamp > (
         select coalesce(max(max_tstamp), '0001-01-01') from {{ this }}
     )
