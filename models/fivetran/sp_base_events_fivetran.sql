@@ -26,15 +26,15 @@ fixed as (
     select *,
         -- Fivetran doesn't exactly adhere to the Snowplow spec.
         -- Just make these fields null so we can use the open source snowplow dbt package
-        collector_tstamp as derived_tstamp,
-        dvce_tstamp::timestamp as dvce_created_tstamp,
+        -- collector_tstamp as derived_tstamp,
+        -- dvce_tstamp::timestamp as dvce_created_tstamp,
         case when event = 'pv' then 'page_view'
              when event = 'pp' then 'page_ping'
         else event end as fixed_event,
         null::timestamp as etl_tstamp,
-        null as dvce_screenwidth,
-        null as mkt_clickid,
-        null as mkt_network
+        null as dvce_screenwidth
+        -- null as mkt_clickid,
+        -- null as mkt_network
 
     from events
 
